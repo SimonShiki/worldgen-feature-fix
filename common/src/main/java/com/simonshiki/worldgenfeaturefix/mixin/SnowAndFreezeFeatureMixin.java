@@ -1,5 +1,6 @@
 package com.simonshiki.worldgenfeaturefix.mixin;
 
+import com.simonshiki.worldgenfeaturefix.Constants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
@@ -10,10 +11,15 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(SnowAndFreezeFeature.class)
 public class SnowAndFreezeFeatureMixin {
-
     @Redirect(method = "place", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/WorldGenLevel;getBiome(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/core/Holder;"))
     private net.minecraft.core.Holder<Biome> redirectGetBiome(WorldGenLevel worldGenLevel, BlockPos pos) {
-        // Use getUncachedNoiseBiome instead of getBiome to avoid calling getChunk() during world generation
-        return worldGenLevel.getUncachedNoiseBiome(pos.getX(), pos.getY(), pos.getZ());
+        try {
+            return worldGenLevel.getBiome(pos);
+        } catch (Exception e) {
+            // If getBiome fails (chunk unavailable during world generation),
+            // use getUncachedNoiseBiome as fallback
+            Constants.LOG.warn("SnowAndFreezeFeature: getBiome failed at {} due to chunk unavailability, falling back to getUncachedNoiseBiome. Reason: {}", pos, e.getMessage());
+            return worldGenLevel.getUncachedNoiseBiome(pos.getX(), pos.getY(), pos.getZ());
+        }
     }
 }
