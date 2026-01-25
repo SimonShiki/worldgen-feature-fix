@@ -1,5 +1,6 @@
 package com.simonshiki.worldgenfeaturefix.mixin;
 
+import com.simonshiki.worldgenfeaturefix.Constants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.biome.Biome;
@@ -12,9 +13,13 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 public class LakeFeatureMixin {
     @Redirect(method = "place", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/WorldGenLevel;getBiome(Lnet/minecraft/core/BlockPos;)Lnet/minecraft/core/Holder;"))
     private net.minecraft.core.Holder<Biome> redirectGetBiome(WorldGenLevel worldGenLevel, BlockPos pos) {
-        if (worldGenLevel.hasChunk(pos.getX() >> 4, pos.getZ() >> 4)) {
+        try {
             return worldGenLevel.getBiome(pos);
+        } catch (Exception e) {
+            // If getBiome fails (chunk unavailable during world generation),
+            // use getUncachedNoiseBiome as fallback
+            Constants.LOG.warn("LakeFeature: getBiome failed at {} due to chunk unavailability, falling back to getUncachedNoiseBiome. Reason: {}", pos, e.getMessage());
+            return worldGenLevel.getUncachedNoiseBiome(pos.getX(), pos.getY(), pos.getZ());
         }
-        return worldGenLevel.getUncachedNoiseBiome(pos.getX() >> 2, pos.getY() >> 2, pos.getZ() >> 2);
     }
 }
